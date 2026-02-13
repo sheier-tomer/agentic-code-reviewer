@@ -1,0 +1,23 @@
+rules:
+  - id: hardcoded-secret
+    patterns:
+      - pattern: api_key = "..."
+      - pattern: password = "..."
+      - pattern: secret = "..."
+    message: "Potential hardcoded secret detected"
+    severity: ERROR
+    languages: [python]
+  
+  - id: sql-injection
+    patterns:
+      - pattern: cursor.execute(f"... { ... }")
+    message: "Potential SQL injection vulnerability"
+    severity: ERROR
+    languages: [python]
+  
+  - id: eval-usage
+    patterns:
+      - pattern: eval(...)
+    message: "Avoid using eval() - potential code injection"
+    severity: WARNING
+    languages: [python]

@@ -1,0 +1,53 @@
+weights:
+  tests: 0.40
+  lint: 0.15
+  format: 0.05
+  typecheck: 0.25
+  security: 0.15
+
+thresholds:
+  quality_approve: 80.0
+  quality_review: 60.0
+  risk_review: 0.3
+  risk_reject: 0.7
+
+risk_factors:
+  diff_size:
+    weight: 0.15
+    thresholds:
+      - lines: 100
+        risk: 0.3
+      - lines: 200
+        risk: 0.6
+      - lines: 500
+        risk: 1.0
+  
+  sensitive_paths:
+    weight: 0.25
+    paths:
+      - auth/
+      - security/
+      - payment/
+      - config/
+      - secrets/
+  
+  test_coverage:
+    weight: 0.20
+  
+  complexity:
+    weight: 0.10
+    thresholds:
+      - structures: 10
+        risk: 0.4
+      - structures: 20
+        risk: 0.7
+  
+  dependencies:
+    weight: 0.15
+    files:
+      - requirements.txt
+      - pyproject.toml
+      - setup.py
+  
+  new_code_ratio:
+    weight: 0.15
