@@ -1,0 +1,130 @@
+Create a Python test repository called `dummy-auth-api` that simulates a typical small web API project with intentional code issues for testing an AI code reviewer. The repository should have the following structure:
+
+```
+dummy-auth-api/
+├── src/
+│   ├── __init__.py
+│   ├── main.py              # FastAPI app entry point
+│   ├── config.py            # Configuration with hardcoded secrets (intentional issue)
+│   ├── auth/
+│   │   ├── __init__.py
+│   │   ├── routes.py        # Auth endpoints with security issues
+│   │   └── utils.py         # Password hashing with weak implementation
+│   ├── users/
+│   │   ├── __init__.py
+│   │   ├── routes.py        # User CRUD endpoints
+│   │   └── models.py        # User model
+│   └── utils/
+│       ├── __init__.py
+│       ├── database.py      # Database connection
+│       └── validators.py    # Input validation with gaps
+├── tests/
+│   ├── __init__.py
+│   ├── test_auth.py         # Incomplete test coverage
+│   └── test_users.py        # Missing edge case tests
+├── requirements.txt
+├── pyproject.toml
+└── README.md
+```
+
+INTENTIONAL ISSUES TO INCLUDE:
+
+1. SECURITY ISSUES (for "review" task type):
+   - Hardcoded API keys/secrets in `config.py`
+   - SQL injection vulnerability in `users/routes.py`
+   - Weak password hashing in `auth/utils.py`
+   - Missing input validation on user inputs
+   - No rate limiting on auth endpoints
+
+2. CODE QUALITY ISSUES (for "refactor" task type):
+   - Duplicate code between `auth/routes.py` and `users/routes.py`
+   - Long functions that should be refactored
+   - Missing type hints in several places
+   - Inconsistent error handling patterns
+   - Dead code / unused imports
+
+3. BUG OPPORTUNITIES (for "bugfix" task type):
+   - Off-by-one error in pagination
+   - Race condition in user creation
+   - Memory leak in database connection handling
+   - Incorrect exception handling that swallows errors
+
+4. MISSING FEATURES:
+   - Incomplete test coverage (only happy paths)
+   - No logging
+   - No input sanitization
+   - Missing docstrings on key functions
+
+REQUIREMENTS FOR THE FILES:
+- Use FastAPI for the web framework
+- Use SQLAlchemy async for database
+- Make the code realistic (not obviously broken, but has real issues)
+- Include enough complexity that an AI reviewer would find multiple actionable items
+- Keep it SIMPLE enough to test all 3 review functions (review, refactor, bugfix)
+- Total ~400-600 lines of code
+- Each file should be functional but have clear improvement opportunities
+
+EXAMPLE FILE CONTENTS:
+
+src/main.py:
+- Create FastAPI app
+- Include routers for auth and users
+- Add basic startup/shutdown events
+- Missing: proper logging middleware, error handlers
+
+src/config.py:
+- Load settings from environment
+- Include HARDCODED secret key (intentional security issue)
+- Missing: validation of required settings
+
+src/auth/routes.py:
+- Login endpoint with weak error messages
+- Register endpoint
+- Missing: rate limiting, proper token refresh
+
+src/auth/utils.py:
+- Password hashing using weak algorithm (e.g., simple hash instead of bcrypt)
+- JWT token creation
+- Missing: token expiration handling
+
+src/users/routes.py:
+- CRUD endpoints for users
+- SQL injection vulnerability in search/filter
+- Pagination with off-by-one error
+
+src/users/models.py:
+- User SQLAlchemy model
+- Missing: proper constraints, indexes
+
+src/utils/database.py:
+- Async database connection
+- Connection leak (not properly closing sessions)
+
+src/utils/validators.py:
+- Basic input validation
+- Missing: email format validation, password strength check
+
+tests/test_auth.py:
+- Basic login/register tests
+- Missing: edge cases, error scenarios, security tests
+
+tests/test_users.py:
+- Basic CRUD tests
+- Missing: pagination tests, search tests, error handling
+
+requirements.txt:
+- fastapi
+- uvicorn
+- sqlalchemy
+- asyncpg
+- pydantic
+- python-jose (for JWT)
+- passlib (for hashing)
+
+pyproject.toml:
+- Basic project configuration
+- Missing: proper dev dependencies, tool configs
+
+README.md:
+- Basic setup instructions
+- Missing: API documentation, usage examples
