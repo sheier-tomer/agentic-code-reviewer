@@ -1,4 +1,5 @@
 from src.api import create_app
+from src.config import settings
 
 app = create_app()
 
