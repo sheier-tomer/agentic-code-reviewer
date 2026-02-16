@@ -34,9 +34,10 @@ class Embedder:
         base_url: str | None = None,
     ):
         self.model = model or settings.embedding_model
+        effective_base_url = base_url or settings.openai_base_url or None
         self.client = AsyncOpenAI(
             api_key=api_key or settings.openai_api_key,
-            base_url=base_url or settings.openai_base_url,
+            base_url=effective_base_url,
         )
 
     async def embed_single(self, text: str) -> list[float]:
@@ -45,9 +46,14 @@ class Embedder:
 
     async def embed_batch(self, texts: list[str], batch_size: int = 100) -> list[list[float]]:
         embeddings: list[list[float]] = []
+        
+        # Filter out empty texts
+        valid_texts = [t for t in texts if t and t.strip()]
+        if not valid_texts:
+            return []
 
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i : i + batch_size]
+        for i in range(0, len(valid_texts), batch_size):
+            batch = valid_texts[i : i + batch_size]
             response = await self.client.embeddings.create(input=batch, model=self.model)
             batch_embeddings = [item.embedding for item in response.data]
             embeddings.extend(batch_embeddings)
@@ -103,13 +109,18 @@ class RepoIngester:
         if not chunks:
             return []
 
-        texts = [self._prepare_text_for_embedding(chunk) for chunk in chunks]
+        import uuid
+
+        # Filter out chunks with empty content
+        valid_chunks = [c for c in chunks if c.content and c.content.strip()]
+        if not valid_chunks:
+            return []
+
+        texts = [self._prepare_text_for_embedding(chunk) for chunk in valid_chunks]
         embeddings = await self.embedder.embed_batch(texts)
 
         embedded_chunks: list[EmbeddedChunk] = []
-        for i, chunk in enumerate(chunks):
-            import uuid
-
+        for i, chunk in enumerate(valid_chunks):
             embedded_chunks.append(
                 EmbeddedChunk(
                     id=str(uuid.uuid4()),

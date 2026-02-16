@@ -17,10 +17,6 @@ RUN pip install --no-cache-dir \
     types-requests \
     types-redis
 
-COPY pyproject.toml .
-
-RUN pip install --no-cache-dir -e .
-
 RUN mkdir -p /workspace/repo
 
 WORKDIR /workspace/repo

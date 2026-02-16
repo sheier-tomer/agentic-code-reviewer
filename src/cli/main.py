@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Optional
+import asyncio
 
 import typer
 from rich.console import Console
@@ -23,6 +24,15 @@ def review(
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file for diff"),
 ):
     """Run an AI-powered code review on a repository."""
+    asyncio.run(_async_review(repo_path, task, task_type, output))
+
+
+async def _async_review(
+    repo_path: Path,
+    task: str,
+    task_type: str,
+    output: Optional[Path],
+):
     task_type_enum = TaskType(task_type.lower())
     
     with Progress(
@@ -39,7 +49,7 @@ def review(
         )
         
         graph = build_graph()
-        final_state = graph.invoke(state)
+        final_state = await graph.ainvoke(state)
     
     _display_results(final_state, output)
 
@@ -186,8 +196,12 @@ def runs():
     console.print(table)
 
 
-def _display_results(state: AgentState, output: Optional[Path] = None):
+def _display_results(state: AgentState | dict, output: Optional[Path] = None):
     console.print()
+    
+    # Handle dict returned from ainvoke
+    if isinstance(state, dict):
+        state = AgentState(**state)
     
     decision_color = {
         Decision.AUTO_APPROVE: "green",
@@ -196,7 +210,7 @@ def _display_results(state: AgentState, output: Optional[Path] = None):
     }.get(state.decision, "white")
     
     console.print(Panel(
-        f"[bold]Decision:[/bold] [{decision_color}]{state.decision.value}[/{decision_color}]\n"
+        f"[bold]Decision:[/bold] [{decision_color}]{state.decision.value if state.decision else 'unknown'}[/{decision_color}]\n"
         f"[bold]Quality Score:[/bold] {state.quality_score:.1f}/100\n"
         f"[bold]Risk Score:[/bold] {state.risk_score:.2f}",
         title="Review Results",

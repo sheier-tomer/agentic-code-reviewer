@@ -12,9 +12,10 @@ class LLMClient:
         base_url: str | None = None,
     ):
         self.model = model or settings.llm_model
+        effective_base_url = base_url or settings.openai_base_url or None
         self.client = AsyncOpenAI(
             api_key=api_key or settings.openai_api_key,
-            base_url=base_url or settings.openai_base_url,
+            base_url=effective_base_url,
         )
 
     async def generate(

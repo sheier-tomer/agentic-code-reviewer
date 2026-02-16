@@ -51,7 +51,7 @@ dev = [
 ]
 
 [project.scripts]
-kilo = "cli.main:app"
+kilo = "src.cli.main:app"
 
 [build-system]
 requires = ["hatchling"]

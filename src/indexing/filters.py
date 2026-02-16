@@ -88,7 +88,7 @@ class GitIgnoreFilter:
             if path == pattern[1:] or path.startswith(pattern[1:] + "/"):
                 return True
         elif pattern.endswith("/"):
-            if path.startswith(pattern) or "/" + path.startswith("/" + pattern):
+            if path.startswith(pattern) or ("/" + path).startswith("/" + pattern):
                 return True
         else:
             if fnmatch.fnmatch(path, pattern):
