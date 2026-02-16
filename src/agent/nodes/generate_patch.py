@@ -14,25 +14,33 @@ async def generate_patch(
 
     diff_generator = DiffGenerator()
     all_diffs: list[str] = []
+    repo_path = Path(state.repo_path)
 
     for change in state.change_plan.changes:
-        file_path = Path(state.repo_path) / change.file_path
+        file_path = Path(change.file_path)
+        
+        if file_path.is_absolute():
+            full_path = file_path
+            relative_path = str(file_path.relative_to(repo_path)) if file_path.is_relative_to(repo_path) else file_path.name
+        else:
+            full_path = repo_path / change.file_path
+            relative_path = change.file_path
 
-        if not file_path.exists():
+        if not full_path.exists():
             state.errors.append(f"File not found: {change.file_path}")
             continue
 
         try:
-            current_content = file_path.read_text(encoding="utf-8")
+            current_content = full_path.read_text(encoding="utf-8")
         except Exception as e:
             state.errors.append(f"Failed to read {change.file_path}: {e}")
             continue
 
-        context = _build_context(state.retrieved_chunks, change.file_path)
+        context = _build_context(state.retrieved_chunks, str(full_path))
 
         try:
             diff = await diff_generator.generate_diff(
-                file_path=change.file_path,
+                file_path=relative_path,
                 current_content=current_content,
                 description=change.description,
                 context=context,

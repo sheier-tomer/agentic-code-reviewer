@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     max_files_per_run: int = 10
     max_diff_lines: int = 500
     max_context_tokens: int = 50000
-    min_similarity_threshold: float = 0.7
+    min_similarity_threshold: float = 0.1
     max_retries: int = 2
 
     scoring_quality_threshold_approve: float = 80.0

@@ -61,6 +61,41 @@ def index(
     """Index a repository for code retrieval."""
     import asyncio
     from src.indexing import ingest_repository
+    from src.db.models import async_session, Repository, CodeChunk
+    import uuid
+    
+    async def index_and_save():
+        chunks, manifest = await ingest_repository(repo_path)
+        
+        if not chunks:
+            return chunks, manifest
+        
+        async with async_session() as db:
+            repo = Repository(
+                name=repo_path.name,
+                remote_url=None,
+                default_branch="main",
+            )
+            db.add(repo)
+            await db.flush()
+            
+            for chunk in chunks:
+                db_chunk = CodeChunk(
+                    repo_id=repo.id,
+                    file_path=chunk.file_path,
+                    chunk_type=chunk.chunk_type,
+                    symbol_name=chunk.symbol_name,
+                    start_line=chunk.start_line,
+                    end_line=chunk.end_line,
+                    content=chunk.content,
+                    language=chunk.language,
+                    embedding=chunk.embedding,
+                )
+                db.add(db_chunk)
+            
+            await db.commit()
+        
+        return chunks, manifest
     
     with Progress(
         SpinnerColumn(),
@@ -69,7 +104,7 @@ def index(
     ) as progress:
         progress.add_task("Indexing repository...", total=None)
         
-        chunks, manifest = asyncio.run(ingest_repository(repo_path))
+        chunks, manifest = asyncio.run(index_and_save())
     
     console.print(f"\n[green]Indexed {len(chunks)} code chunks from {len(manifest)} files[/green]")
     

@@ -33,15 +33,18 @@ OUTPUT: JSON with the following structure:
     "files_to_modify": ["list of file paths"],
     "changes": [
         {
-            "file_path": "path/to/file.py",
+            "file_path": "<actual file path from Code Context>",
             "change_type": "modify|add|refactor",
             "description": "What will be changed",
             "affected_symbols": ["list of function/class names"]
         }
     ],
     "rationale": "Why these changes are needed",
-    "confidence": 0.0-1.0
-}"""
+    "confidence": 0.0-1.0,
+    "estimated_impact": "low|medium|high"
+}
+
+IMPORTANT: Only use file paths that exist in the Code Context section above. Do not invent or use placeholder paths."""
 
 
 async def plan_change(
@@ -62,7 +65,7 @@ async def plan_change(
             f"```\n{chunk.content}\n```\n"
         )
 
-    context = "\n---\n".join(context_parts)
+    context = "\n---\n".join(context_parts) if context_parts else "No relevant code context found. Analyze the repository structure."
 
     prompt = f"""Task: {state.task_description}
 Task Type: {state.task_type}
@@ -70,7 +73,7 @@ Task Type: {state.task_type}
 Code Context:
 {context}
 
-Affected Files: {', '.join(state.affected_files)}
+Affected Files: {', '.join(state.affected_files) if state.affected_files else 'All relevant files'}
 
 Create a structured change plan. Output JSON only."""
 
@@ -81,7 +84,20 @@ Create a structured change plan. Output JSON only."""
             temperature=0.1,
         )
 
-        plan_data = json.loads(response)
+        if not response or not response.strip():
+            state.errors.append("LLM returned empty response")
+            return state
+
+        response_text = response.strip()
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+
+        plan_data = json.loads(response_text)
 
         state.change_plan = ChangePlan(
             description=plan_data.get("description", ""),
@@ -97,6 +113,7 @@ Create a structured change plan. Output JSON only."""
             ],
             rationale=plan_data.get("rationale", ""),
             confidence=plan_data.get("confidence", 0.5),
+            estimated_impact=plan_data.get("estimated_impact", "medium"),
         )
 
         state.plan_confidence = state.change_plan.confidence

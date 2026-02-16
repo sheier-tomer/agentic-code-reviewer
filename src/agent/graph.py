@@ -13,7 +13,7 @@ from src.agent.nodes import (
     run_checks,
     score_change,
 )
-from src.agent.state import AgentState, RunStatus
+from src.agent.state import AgentState, RunStatus, TaskType
 
 
 def should_continue(state: AgentState) -> Literal["continue", "end"]:
@@ -30,6 +30,14 @@ def route_after_patch(state: AgentState) -> Literal["run_checks", "retry", "end"
             return "retry"
         return "end"
     return "run_checks"
+
+
+def route_after_generate(state: AgentState) -> Literal["apply_patch", "score_change", "end"]:
+    if state.errors:
+        return "end"
+    if state.task_type == TaskType.REVIEW:
+        return "score_change"
+    return "apply_patch"
 
 
 def route_after_scoring(state: AgentState) -> Literal["explain", "end"]:
@@ -66,8 +74,8 @@ def build_graph():
     )
     workflow.add_conditional_edges(
         "generate_patch",
-        should_continue,
-        {"continue": "apply_patch", "end": "escalate_finalize"},
+        route_after_generate,
+        {"apply_patch": "apply_patch", "score_change": "score_change", "end": "escalate_finalize"},
     )
     workflow.add_conditional_edges(
         "apply_patch",

@@ -45,6 +45,8 @@ def upgrade() -> None:
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
 
+    op.execute("ALTER TABLE code_chunks ALTER COLUMN embedding TYPE vector(1536) USING embedding::vector")
+
     op.execute("CREATE INDEX idx_code_chunks_file_path ON code_chunks (file_path)")
     op.execute("CREATE INDEX idx_code_chunks_symbol_name ON code_chunks (symbol_name)")
 

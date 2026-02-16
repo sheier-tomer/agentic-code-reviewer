@@ -8,6 +8,11 @@ from src.db.models import CodeChunk
 from src.indexing.embedder import Embedder
 
 
+def _format_vector(embedding: list[float]) -> str:
+    """Format embedding as pgvector literal."""
+    return "[" + ",".join(str(x) for x in embedding) + "]"
+
+
 class VectorSearch:
     def __init__(self, embedder: Embedder | None = None):
         self.embedder = embedder or Embedder()
@@ -23,43 +28,42 @@ class VectorSearch:
         min_similarity = min_similarity or settings.min_similarity_threshold
 
         query_embedding = await self.embedder.embed_single(query)
+        embedding_str = _format_vector(query_embedding)
 
         if repo_id:
-            sql = text("""
+            sql = text(f"""
                 SELECT 
                     id, file_path, chunk_type, symbol_name, 
                     start_line, end_line, content, language,
-                    1 - (embedding <=> :embedding) as similarity
+                    1 - (embedding <=> '{embedding_str}'::vector) as similarity
                 FROM code_chunks
                 WHERE repo_id = :repo_id
-                  AND 1 - (embedding <=> :embedding) > :min_similarity
+                  AND 1 - (embedding <=> '{embedding_str}'::vector) > :min_similarity
                 ORDER BY similarity DESC
                 LIMIT :limit
             """)
             result = await db.execute(
                 sql,
                 {
-                    "embedding": str(query_embedding),
                     "repo_id": repo_id,
                     "min_similarity": min_similarity,
                     "limit": top_k,
                 },
             )
         else:
-            sql = text("""
+            sql = text(f"""
                 SELECT 
                     id, file_path, chunk_type, symbol_name, 
                     start_line, end_line, content, language,
-                    1 - (embedding <=> :embedding) as similarity
+                    1 - (embedding <=> '{embedding_str}'::vector) as similarity
                 FROM code_chunks
-                WHERE 1 - (embedding <=> :embedding) > :min_similarity
+                WHERE 1 - (embedding <=> '{embedding_str}'::vector) > :min_similarity
                 ORDER BY similarity DESC
                 LIMIT :limit
             """)
             result = await db.execute(
                 sql,
                 {
-                    "embedding": str(query_embedding),
                     "min_similarity": min_similarity,
                     "limit": top_k,
                 },

@@ -76,7 +76,8 @@ Output the unified diff:"""
             temperature=0.0,
         )
 
-        return self._extract_diff(response)
+        diff = self._extract_diff(response)
+        return self._normalize_hunk_headers(diff)
 
     def _extract_diff(self, response: str) -> str:
         diff_pattern = r"```diff\n(.*?)\n```"
@@ -99,6 +100,67 @@ Output the unified diff:"""
                 diff_lines.append(line)
 
         return "\n".join(diff_lines).strip() if diff_lines else response.strip()
+
+    def _normalize_hunk_headers(self, diff: str) -> str:
+        lines = diff.split("\n")
+        result = []
+        i = 0
+        
+        while i < len(lines):
+            line = lines[i]
+            
+            if line.startswith("@@"):
+                hunk_lines = []
+                i += 1
+                while i < len(lines) and not lines[i].startswith("@@") and not lines[i].startswith("---") and not lines[i].startswith("diff --git"):
+                    hunk_lines.append(lines[i])
+                    i += 1
+                
+                cleaned_hunk = self._clean_hunk(hunk_lines)
+                
+                removed = sum(1 for l in cleaned_hunk if l.startswith("-") and not l.startswith("---"))
+                added = sum(1 for l in cleaned_hunk if l.startswith("+") and not l.startswith("+++"))
+                context = sum(1 for l in cleaned_hunk if not l.startswith(("+", "-")))
+                
+                match = re.match(r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+                if match:
+                    old_start = int(match.group(1))
+                    new_start = int(match.group(2))
+                    old_count = removed + context
+                    new_count = added + context
+                    
+                    if old_count == 0:
+                        old_count = 1
+                        old_start = 1
+                    if new_count == 0:
+                        new_count = 1
+                        new_start = 1
+                    
+                    result.append(f"@@ -{old_start},{old_count} +{new_start},{new_count} @@")
+                else:
+                    result.append(line)
+                result.extend(cleaned_hunk)
+            else:
+                result.append(line)
+                i += 1
+        
+        return "\n".join(result)
+
+    def _clean_hunk(self, hunk_lines: list[str]) -> list[str]:
+        cleaned = []
+        for line in hunk_lines:
+            if line.startswith(("+", "-")) and not line.startswith(("+++", "---")):
+                content = line[1:]
+                stripped = content.rstrip()
+                if stripped == "" and content != "":
+                    continue
+                cleaned.append(line[0] + stripped)
+            elif line == "" or line == " ":
+                cleaned.append("")
+            else:
+                cleaned.append(line.rstrip())
+        
+        return cleaned
 
     async def generate_multi_file_diff(
         self,

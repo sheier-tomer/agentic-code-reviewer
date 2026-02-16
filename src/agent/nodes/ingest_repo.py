@@ -3,7 +3,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import select
+
 from src.agent.state import AgentState, RunStatus
+from src.db.models import async_session, Repository
 from src.indexing.filters import FileFilter, filter_files
 
 
@@ -49,5 +52,16 @@ async def ingest_repo(state: AgentState) -> AgentState:
         "file_count": len(state.file_index),
         "total_size": sum(f.get("size", 0) for f in state.file_index),
     }
+
+    async with async_session() as db:
+        result = await db.execute(
+            select(Repository)
+            .where(Repository.name == repo_path.name)
+            .order_by(Repository.created_at.desc())
+            .limit(1)
+        )
+        repo = result.scalar_one_or_none()
+        if repo:
+            state.repo_id = str(repo.id)
 
     return state
